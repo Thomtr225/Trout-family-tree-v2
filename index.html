@@ -78,6 +78,12 @@
   .person-dates { color: var(--muted); font-size: 0.78rem; margin-top: 1px; }
   .person-tag { display: inline-block; font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); margin-top: 3px; }
 
+
+  /* ── Profile photo edit overlay ── */
+  .modal-photo-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
+  .modal-photo-wrap .photo-edit-btn { position: absolute; bottom: 2px; right: 2px; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); border: 2px solid #fff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .modal-photo-wrap:hover .photo-edit-btn { opacity: 1; }
+  .modal-photo-wrap .photo-edit-btn.always { opacity: 1; pointer-events: auto; }
   /* ── Person detail modal ── */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(28,43,58,0.6); display: flex; align-items: center; justify-content: center; z-index: 300; padding: 1rem; }
   .modal-backdrop.hidden { display: none; }
@@ -837,8 +843,16 @@ function openPerson(id) {
     (fam.chil || []).forEach(cid => { if (cid !== id && STATE.people[cid]) siblings.push(cid); });
   });
 
+  const canEdit = STATE.role === 'admin';
+  const pencilBtn = canEdit
+    ? `<div class="photo-edit-btn always" onclick="event.stopPropagation();triggerPrimaryPhotoUpload('${id}')" title="Change photo">✏️</div>`
+    : '';
+  const photoWrap = canEdit
+    ? `<div class="modal-photo-wrap" onclick="triggerPrimaryPhotoUpload('${id}')"><div class="modal-photo">${photoHTML}</div>${pencilBtn}</div>`
+    : `<div class="modal-photo">${photoHTML}</div>`;
+
   document.getElementById('modal-header').innerHTML = `
-    <div class="modal-photo">${photoHTML}</div>
+    ${photoWrap}
     <div class="modal-title-area">
       <div class="modal-name">${personName(p)}</div>
       ${p.name !== (p.given+' '+p.surname).trim() && p.surname ? `<div class="modal-name-aka">née ${p.surname}</div>` : ''}
@@ -1178,33 +1192,54 @@ function renderLightbox() {
 
 // Photo upload
 let uploadTargetId = null;
+let uploadReplaceIndex = -1; // -1 = add new, 0+ = replace at index
+
+function triggerPrimaryPhotoUpload(id) {
+  uploadTargetId = id;
+  uploadReplaceIndex = 0; // replace primary photo
+  const input = document.getElementById('photo-upload-input');
+  input.removeAttribute('multiple'); // single file for profile photo
+  input.value = '';
+  input.click();
+}
+
 function triggerPhotoUpload(id) {
   uploadTargetId = id;
-  document.getElementById('photo-upload-input').value = '';
-  document.getElementById('photo-upload-input').click();
+  uploadReplaceIndex = -1; // add new photos
+  const input = document.getElementById('photo-upload-input');
+  input.setAttribute('multiple', 'multiple');
+  input.value = '';
+  input.click();
 }
 
 function handlePhotoUpload(event) {
   const files = Array.from(event.target.files);
   if (!files.length || !uploadTargetId) return;
   const id = uploadTargetId;
+  const replaceIdx = uploadReplaceIndex;
   if (!STATE.photos[id]) STATE.photos[id] = [];
 
   let loaded = 0;
-  files.forEach(file => {
+  files.forEach((file, fi) => {
     const reader = new FileReader();
     reader.onload = e => {
-      STATE.photos[id].push(e.target.result);
+      if (replaceIdx >= 0 && fi === 0) {
+        // Replace the primary/profile photo at that index
+        STATE.photos[id][replaceIdx] = e.target.result;
+      } else {
+        STATE.photos[id].push(e.target.result);
+      }
       loaded++;
-      // Save to localStorage
       try {
         const photoEdits = JSON.parse(localStorage.getItem('trout-photo-edits') || '{}');
         photoEdits[id] = STATE.photos[id];
         localStorage.setItem('trout-photo-edits', JSON.stringify(photoEdits));
       } catch(err) {}
       if (loaded === files.length) {
-        showToast(`${loaded} photo${loaded>1?'s':''} added`);
-        openPerson(id); // refresh modal
+        uploadReplaceIndex = -1;
+        showToast(replaceIdx >= 0 ? 'Profile photo updated' : `${loaded} photo${loaded>1?'s':''} added`);
+        openPerson(id);
+        buildGallery();
       }
     };
     reader.readAsDataURL(file);
