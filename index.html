@@ -109,18 +109,24 @@
   #tree-panel { padding: 0; display: flex; flex-direction: column; }
   .tree-toolbar { padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 0.75rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
   .tree-toolbar h2 { font-family: Georgia, serif; font-size: 1rem; color: var(--muted); margin-right: auto; }
-  #tree-canvas-wrap { flex: 1; overflow: auto; min-height: 400px; background: var(--bg); position: relative; }
-  #tree-svg { display: block; }
-  .tree-node { cursor: pointer; }
-  .tree-node rect { fill: var(--surface); stroke: var(--border); stroke-width: 1; rx: 6; transition: stroke 0.15s; }
-  .tree-node.selected rect { stroke: var(--accent); stroke-width: 2; }
-  .tree-node:hover rect { stroke: var(--accent); }
-  .tree-node text { font-family: -apple-system, sans-serif; fill: var(--ink); font-size: 11px; }
-  .tree-node .node-name { font-size: 12px; font-weight: 600; }
-  .tree-node .node-dates { font-size: 10px; fill: var(--muted); }
-  .tree-edge { fill: none; stroke: var(--border); stroke-width: 1.5; }
+  #tree-canvas-wrap { flex: 1; overflow-y: auto; background: var(--bg); padding: 1.5rem; }
   .tree-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; text-align: center; gap: 1rem; color: var(--muted); }
   .tree-empty .tree-icon-lg { font-size: 3rem; opacity: 0.4; }
+  .gen-section { margin-bottom: 2rem; }
+  .gen-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.85rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  .gen-row { display: flex; flex-wrap: wrap; gap: 0.85rem; }
+  .tree-card { background: var(--surface); border-radius: 12px; border-top: 3px solid var(--border); padding: 1rem 0.85rem 0.85rem; cursor: pointer; transition: box-shadow 0.15s, transform 0.1s; text-align: center; width: 140px; flex-shrink: 0; }
+  .tree-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-2px); }
+  .tree-card.male { border-top-color: #4a7ab5; }
+  .tree-card.female { border-top-color: #b5507a; }
+  .tree-card.root { border-top-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .tc-photo { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); overflow: hidden; margin: 0 auto 0.6rem; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1.3rem; color: var(--muted); }
+  .tree-card.male .tc-photo { border-color: #4a7ab5; }
+  .tree-card.female .tc-photo { border-color: #b5507a; }
+  .tc-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .tc-name { font-weight: 700; font-size: 0.82rem; color: var(--ink); line-height: 1.3; margin-bottom: 0.25rem; }
+  .tc-years { font-size: 0.74rem; color: var(--muted); margin-bottom: 0.2rem; }
+  .tc-place { font-size: 0.7rem; color: var(--accent); }
 
   /* ── Stats view ── */
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
@@ -165,6 +171,29 @@
   .section-header p { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
   .empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); }
 
+
+  /* ── Edit modal ── */
+  .edit-modal-backdrop { position: fixed; inset: 0; background: rgba(28,43,58,0.65); display: flex; align-items: center; justify-content: center; z-index: 400; padding: 1rem; }
+  .edit-modal-backdrop.hidden { display: none; }
+  .edit-modal { background: var(--surface); border-radius: 16px; max-width: 600px; width: 100%; max-height: 92vh; overflow-y: auto; position: relative; }
+  .edit-modal-header { padding: 1.5rem 1.5rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+  .edit-modal-header h2 { font-family: Georgia, serif; font-size: 1.15rem; flex: 1; }
+  .edit-modal-body { padding: 1.25rem 1.5rem; }
+  .edit-section { margin-bottom: 1.5rem; }
+  .edit-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 0.85rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  .edit-field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .edit-field.full { grid-column: 1 / -1; }
+  .edit-field label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+  .edit-field input, .edit-field select, .edit-field textarea { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; background: var(--bg); color: var(--ink); outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .edit-field input:focus, .edit-field select:focus, .edit-field textarea:focus { border-color: var(--accent); }
+  .edit-field textarea { min-height: 80px; resize: vertical; }
+  .sex-options { display: flex; gap: 1rem; padding-top: 0.25rem; }
+  .sex-option { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; cursor: pointer; }
+  .sex-option input { width: auto; }
+  .edit-modal-footer { padding: 1rem 1.5rem 1.5rem; display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid var(--border); }
+  .edit-saved-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 0.6rem 1.25rem; border-radius: 20px; font-size: 0.875rem; z-index: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .edit-saved-toast.show { opacity: 1; }
   @media (max-width: 600px) {
     .nav-tabs .nav-tab { padding: 0 0.5rem; font-size: 0.78rem; }
     .nav-brand small { display: none; }
@@ -220,11 +249,11 @@
     <div class="tree-toolbar">
       <h2 id="tree-title">Select a person to view their tree</h2>
       <input type="text" class="search-input" id="tree-search" placeholder="Search to center tree…" style="max-width:260px;" oninput="filterTreeSearch(this.value)" />
-      <div id="tree-search-results" style="position:relative;"></div>
       <select id="tree-gen-depth" onchange="redrawTree()">
         <option value="3">3 generations</option>
         <option value="4" selected>4 generations</option>
         <option value="5">5 generations</option>
+        <option value="6">6 generations</option>
       </select>
     </div>
     <div id="tree-canvas-wrap">
@@ -232,7 +261,7 @@
         <div class="tree-icon-lg">🌳</div>
         <p>Search for a family member above to view their ancestor tree.</p>
       </div>
-      <svg id="tree-svg"></svg>
+      <div id="tree-cards"></div>
     </div>
   </div>
 
@@ -307,6 +336,117 @@
   </div>
 </div>
 
+
+<!-- Edit Person Modal -->
+<div class="edit-modal-backdrop hidden" id="edit-modal" onclick="closeEditModal(event)">
+  <div class="edit-modal" id="edit-modal-content">
+    <div class="edit-modal-header">
+      <h2 id="edit-modal-title">Edit person</h2>
+      <button class="modal-close" onclick="closeEditModalBtn()" style="position:relative;top:auto;right:auto;">✕</button>
+    </div>
+    <div class="edit-modal-body">
+
+      <div class="edit-section">
+        <div class="edit-section-title">Sex</div>
+        <div class="sex-options">
+          <label class="sex-option"><input type="radio" name="edit-sex" value="M"> Male</label>
+          <label class="sex-option"><input type="radio" name="edit-sex" value="F"> Female</label>
+          <label class="sex-option"><input type="radio" name="edit-sex" value="U"> Unknown</label>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Name</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>First (and middle) name</label>
+            <input type="text" id="edit-given" placeholder="First Middle">
+          </div>
+          <div class="edit-field">
+            <label>Maiden / birth surname</label>
+            <input type="text" id="edit-surname" placeholder="Surname">
+          </div>
+          <div class="edit-field">
+            <label>Prefix</label>
+            <input type="text" id="edit-prefix" placeholder="Dr., Rev., …">
+          </div>
+          <div class="edit-field">
+            <label>Suffix</label>
+            <input type="text" id="edit-suffix" placeholder="Jr., Sr., III">
+          </div>
+          <div class="edit-field">
+            <label>Married name</label>
+            <input type="text" id="edit-married-name" placeholder="Married surname">
+          </div>
+          <div class="edit-field">
+            <label>Nickname / also known as</label>
+            <input type="text" id="edit-nickname" placeholder="Nickname">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Birth</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>Birth date</label>
+            <input type="text" id="edit-birth-date" placeholder="e.g. 15 MAR 1892">
+          </div>
+          <div class="edit-field">
+            <label>Birth place</label>
+            <input type="text" id="edit-birth-place" placeholder="City, State, Country">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Death</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>Living / Deceased</label>
+            <select id="edit-living">
+              <option value="">Unknown</option>
+              <option value="living">Living</option>
+              <option value="deceased">Deceased</option>
+            </select>
+          </div>
+          <div class="edit-field"></div>
+          <div class="edit-field">
+            <label>Death date</label>
+            <input type="text" id="edit-death-date" placeholder="e.g. 4 JAN 1960">
+          </div>
+          <div class="edit-field">
+            <label>Death place</label>
+            <input type="text" id="edit-death-place" placeholder="City, State, Country">
+          </div>
+          <div class="edit-field">
+            <label>Cause of death</label>
+            <input type="text" id="edit-cause" placeholder="Cause of death">
+          </div>
+          <div class="edit-field">
+            <label>Burial place</label>
+            <input type="text" id="edit-burial" placeholder="Cemetery or burial place">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Notes / Biography</div>
+        <div class="edit-field full">
+          <label>Notes</label>
+          <textarea id="edit-notes" placeholder="Add biographical notes…"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="edit-modal-footer">
+      <button class="btn" onclick="closeEditModalBtn()">Cancel</button>
+      <button class="btn btn-accent" onclick="savePersonEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="edit-saved-toast" id="edit-toast">Changes saved</div>
 <!-- Person detail modal -->
 <div class="modal-backdrop hidden" id="person-modal" onclick="closeModal(event)">
   <div class="modal" id="modal-content">
@@ -385,6 +525,7 @@ function initApp() {
   // Load demo data immediately so UI is never blocked
   parseGEDCOM(getDemoGEDCOM());
   STATE.photos = {};
+  loadSavedEdits();
   buildPeopleView();
   buildStats();
   buildGallery();
@@ -420,6 +561,7 @@ async function tryLoadRealData() {
     if (Object.keys(STATE.photos).length) reloaded = true;
   } catch(e) { /* no photos */ }
   // Rebuild views if real data loaded
+  loadSavedEdits();
   if (reloaded) {
     document.getElementById('people-surname').innerHTML = '<option value="">All surnames</option>';
     buildPeopleView();
@@ -710,8 +852,10 @@ function openPerson(id) {
 
   document.getElementById('modal-body').innerHTML = bodyHTML;
 
+  const isAdmin = STATE.role === 'admin';
   document.getElementById('modal-actions').innerHTML = `
     <button class="btn btn-accent" onclick="viewTreeFor('${id}')">View in tree</button>
+    ${isAdmin ? `<button class="btn" onclick="openEditModal('${id}')">Edit person</button>` : ''}
     <button class="btn" onclick="setbioPerson('${id}')">Generate AI bio</button>
     ${allPhotos.length ? `<button class="btn" onclick="openLightbox('${id}',0)">View photo</button>` : ''}`;
 
@@ -743,6 +887,8 @@ function setbioPerson(id) {
 // ═══════════════════════════════════════════
 let treePerson = null;
 
+const GEN_LABELS = ['','Parents','Grandparents','Great-grandparents','2nd Great-grandparents','3rd Great-grandparents','4th Great-grandparents','5th Great-grandparents'];
+
 function filterTreeSearch(q) {
   const ac = document.getElementById('autocomplete-tree');
   if (!q || q.length < 2) { ac.style.display = 'none'; return; }
@@ -767,104 +913,68 @@ function centerTreeOn(id) {
 function redrawTree() {
   if (!treePerson) return;
   const depth = parseInt(document.getElementById('tree-gen-depth').value) || 4;
-  const tree = buildAncestorTree(treePerson, depth);
-  renderTreeSVG(tree, treePerson);
+  renderTreeCards(treePerson, depth);
   document.getElementById('tree-title').textContent = `Ancestors of ${personName(STATE.people[treePerson])}`;
   document.getElementById('tree-empty').style.display = 'none';
 }
 
-function buildAncestorTree(id, maxDepth, depth=0) {
-  const p = STATE.people[id];
-  if (!p || depth >= maxDepth) return { id, depth, parents: [] };
-  let parents = [];
-  (p.famcS || []).forEach(fid => {
-    const fam = STATE.families[fid];
-    if (!fam) return;
-    if (fam.husb && !parents.find(x=>x.id===fam.husb)) parents.push(buildAncestorTree(fam.husb, maxDepth, depth+1));
-    if (fam.wife && !parents.find(x=>x.id===fam.wife)) parents.push(buildAncestorTree(fam.wife, maxDepth, depth+1));
-  });
-  return { id, depth, parents };
+function getAncestorsByGen(id, maxDepth) {
+  // Returns array of arrays: [gen0=[self], gen1=[parents], gen2=[grandparents], ...]
+  const gens = [[id]];
+  for (let g = 1; g < maxDepth; g++) {
+    const prev = gens[g-1];
+    const next = [];
+    const seen = new Set();
+    prev.forEach(pid => {
+      const p = STATE.people[pid];
+      if (!p) { next.push(null, null); return; }
+      let father = null, mother = null;
+      (p.famcS || []).forEach(fid => {
+        const fam = STATE.families[fid];
+        if (!fam) return;
+        if (fam.husb && !father) father = fam.husb;
+        if (fam.wife && !mother) mother = fam.wife;
+      });
+      next.push(father || null);
+      next.push(mother || null);
+    });
+    gens.push(next);
+  }
+  return gens;
 }
 
-function renderTreeSVG(tree, rootId) {
-  const NW = 160, NH = 54, HGAP = 20, VGAP = 30;
-  const svg = document.getElementById('tree-svg');
+function makeTreeCard(id, isRoot=false) {
+  if (!id) return `<div class="tree-card" style="visibility:hidden;"></div>`;
+  const p = STATE.people[id];
+  if (!p) return '';
+  const photo = personPhoto(id);
+  const photoHTML = photo ? `<img src="${photo}" alt="${personName(p)}" loading="lazy">` : `<span>${initials(p)}</span>`;
+  const sexClass = p.sex === 'M' ? 'male' : p.sex === 'F' ? 'female' : '';
+  const rootClass = isRoot ? ' root' : '';
+  const place = p.birth?.place ? p.birth.place.split(',')[0].trim() : '';
+  return `<div class="tree-card ${sexClass}${rootClass}" onclick="openPerson('${id}')">
+    <div class="tc-photo">${photoHTML}</div>
+    <div class="tc-name">${personName(p)}</div>
+    <div class="tc-years">${personYears(p)}</div>
+    ${place ? `<div class="tc-place">${place}</div>` : ''}
+  </div>`;
+}
 
-  // Lay out nodes: column per generation, rows per position
-  const layout = [];
-  function layoutNode(node, col, rowArr) {
-    if (!rowArr[col]) rowArr[col] = 0;
-    const row = rowArr[col]++;
-    layout.push({ id: node.id, col, row, node });
-    node.parents.forEach(p => layoutNode(p, col+1, rowArr));
-  }
-  const rowArr = [];
-  layoutNode(tree, 0, rowArr);
+function renderTreeCards(rootId, depth) {
+  const gens = getAncestorsByGen(rootId, depth);
+  const container = document.getElementById('tree-cards');
+  let html = '';
 
-  const maxCol = Math.max(...layout.map(n => n.col));
-  const colCounts = {};
-  layout.forEach(n => { colCounts[n.col] = (colCounts[n.col]||0)+1; });
-  const totalRows = Math.max(...Object.values(colCounts));
-  const W = (maxCol+1)*(NW+HGAP) + 20;
-  const H = totalRows*(NH+VGAP) + 20;
-
-  // compute y position: space evenly per column
-  const colItems = {};
-  layout.forEach(n => { if(!colItems[n.col]) colItems[n.col]=[]; colItems[n.col].push(n); });
-  const positions = {};
-  Object.entries(colItems).forEach(([col, items]) => {
-    const count = items.length;
-    items.forEach((n,i) => {
-      const x = parseInt(col)*(NW+HGAP) + 10;
-      const totalH = count*(NH+VGAP) - VGAP;
-      const startY = (H - totalH)/2;
-      const y = startY + i*(NH+VGAP);
-      positions[n.id] = {x,y};
-    });
+  gens.forEach((gen, i) => {
+    const label = i === 0 ? personName(STATE.people[rootId]) : (GEN_LABELS[i] || `Generation ${i+1}`);
+    const cards = gen.map((id, idx) => makeTreeCard(id, i===0)).join('');
+    html += `<div class="gen-section">
+      <div class="gen-label">${label.toUpperCase()}</div>
+      <div class="gen-row">${cards}</div>
+    </div>`;
   });
 
-  // Build SVG
-  let svgContent = '';
-  // Draw edges first
-  function drawEdges(node) {
-    const pos = positions[node.id];
-    node.parents.forEach(p => {
-      const ppos = positions[p.id];
-      if (!pos || !ppos) return;
-      const x1 = pos.x + NW, y1 = pos.y + NH/2;
-      const x2 = ppos.x, y2 = ppos.y + NH/2;
-      const mx = (x1+x2)/2;
-      svgContent += `<path class="tree-edge" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
-      drawEdges(p);
-    });
-  }
-  drawEdges(tree);
-
-  // Draw nodes
-  layout.forEach(({id, node}) => {
-    const pos = positions[id];
-    if (!pos) return;
-    const p = STATE.people[id];
-    const name = personName(p);
-    const years = personYears(p);
-    const isRoot = id === rootId;
-    const stroke = isRoot ? 'var(--accent)' : 'var(--border)';
-    const sw = isRoot ? 2 : 1;
-    const shortName = name.length > 20 ? name.substring(0,18)+'…' : name;
-    const photo = personPhoto(id);
-    const hasPhoto = !!photo;
-    const PH = 36; // photo size inside node if shown
-    svgContent += `<g class="tree-node${isRoot?' selected':''}" onclick="openPerson('${id}')" transform="translate(${pos.x},${pos.y})">
-      <rect width="${NW}" height="${NH}" rx="6" fill="var(--surface)" stroke="${stroke}" stroke-width="${sw}"/>
-      ${hasPhoto ? `<image href="${photo}" x="4" y="${(NH-PH)/2}" width="${PH}" height="${PH}" style="border-radius:4px" preserveAspectRatio="xMidYMid slice" clip-path="inset(0 0 0 0 round 4px)"/>` : ''}
-      <text x="${hasPhoto?PH+8:8}" y="22" class="node-name" fill="var(--ink)" font-size="12" font-weight="600" font-family="-apple-system,sans-serif">${shortName}</text>
-      <text x="${hasPhoto?PH+8:8}" y="38" class="node-dates" fill="var(--muted)" font-size="10" font-family="-apple-system,sans-serif">${years}</text>
-    </g>`;
-  });
-
-  svg.setAttribute('width', W);
-  svg.setAttribute('height', Math.max(H, 300));
-  svg.innerHTML = svgContent;
+  container.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════
@@ -1129,6 +1239,117 @@ function getDemoGEDCOM() {
 2 PLAC Lancaster, Pennsylvania, USA
 0 TRLR`;
 }
+
+
+// ═══════════════════════════════════════════
+// EDIT PERSON
+// ═══════════════════════════════════════════
+let editingPersonId = null;
+
+function openEditModal(id) {
+  editingPersonId = id;
+  const p = STATE.people[id];
+  if (!p) return;
+  closeModalBtn();
+
+  document.getElementById('edit-modal-title').textContent = 'Edit: ' + personName(p);
+
+  // Sex
+  document.querySelectorAll('input[name="edit-sex"]').forEach(r => {
+    r.checked = r.value === (p.sex || 'U');
+  });
+
+  // Name fields
+  document.getElementById('edit-given').value = p.given || '';
+  document.getElementById('edit-surname').value = p.surname || '';
+  document.getElementById('edit-prefix').value = p.prefix || '';
+  document.getElementById('edit-suffix').value = p.suffix || '';
+  document.getElementById('edit-married-name').value = p.marriedName || '';
+  document.getElementById('edit-nickname').value = p.nickname || '';
+
+  // Birth
+  document.getElementById('edit-birth-date').value = p.birth?.date || '';
+  document.getElementById('edit-birth-place').value = p.birth?.place || '';
+
+  // Death
+  document.getElementById('edit-living').value = p.living === true ? 'living' : p.death?.date ? 'deceased' : '';
+  document.getElementById('edit-death-date').value = p.death?.date || '';
+  document.getElementById('edit-death-place').value = p.death?.place || '';
+  document.getElementById('edit-cause').value = p.deathCause || '';
+  document.getElementById('edit-burial').value = p.burial || '';
+
+  // Notes
+  document.getElementById('edit-notes').value = (p.notes || []).join('\n');
+
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function savePersonEdit() {
+  const id = editingPersonId;
+  const p = STATE.people[id];
+  if (!p) return;
+
+  const sex = document.querySelector('input[name="edit-sex"]:checked')?.value || 'U';
+  const given = document.getElementById('edit-given').value.trim();
+  const surname = document.getElementById('edit-surname').value.trim();
+
+  p.sex = sex;
+  p.given = given;
+  p.surname = surname;
+  p.name = [given, surname].filter(Boolean).join(' ');
+  p.prefix = document.getElementById('edit-prefix').value.trim();
+  p.suffix = document.getElementById('edit-suffix').value.trim();
+  p.marriedName = document.getElementById('edit-married-name').value.trim();
+  p.nickname = document.getElementById('edit-nickname').value.trim();
+
+  p.birth = p.birth || {};
+  p.birth.date = document.getElementById('edit-birth-date').value.trim();
+  p.birth.place = document.getElementById('edit-birth-place').value.trim();
+
+  p.death = p.death || {};
+  const livingVal = document.getElementById('edit-living').value;
+  p.living = livingVal === 'living';
+  p.death.date = document.getElementById('edit-death-date').value.trim();
+  p.death.place = document.getElementById('edit-death-place').value.trim();
+  p.deathCause = document.getElementById('edit-cause').value.trim();
+  p.burial = document.getElementById('edit-burial').value.trim();
+
+  const notesText = document.getElementById('edit-notes').value.trim();
+  p.notes = notesText ? notesText.split('\n').filter(Boolean) : [];
+
+  // Save to localStorage so edits persist across page refresh
+  try {
+    const edits = JSON.parse(localStorage.getItem('trout-edits') || '{}');
+    edits[id] = p;
+    localStorage.setItem('trout-edits', JSON.stringify(edits));
+  } catch(e) {}
+
+  closeEditModalBtn();
+  showToast('Changes saved');
+
+  // Refresh people view if visible
+  if (STATE.currentPanel === 'people') filterPeople();
+  if (STATE.currentPanel === 'tree') redrawTree();
+}
+
+function loadSavedEdits() {
+  try {
+    const edits = JSON.parse(localStorage.getItem('trout-edits') || '{}');
+    Object.entries(edits).forEach(([id, data]) => {
+      if (STATE.people[id]) Object.assign(STATE.people[id], data);
+    });
+  } catch(e) {}
+}
+
+function showToast(msg) {
+  const t = document.getElementById('edit-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function closeEditModal(e) { if (e.target === document.getElementById('edit-modal')) closeEditModalBtn(); }
+function closeEditModalBtn() { document.getElementById('edit-modal').classList.add('hidden'); }
 
 // ═══════════════════════════════════════════
 // CLOSE DROPDOWNS ON CLICK OUTSIDE
