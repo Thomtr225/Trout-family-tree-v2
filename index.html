@@ -864,11 +864,6 @@ ang="en">
 </div>
 
 <div id="toast"></div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script>
 // ============================================================
 // DATA
@@ -2018,6 +2013,7 @@ let syncTimer = null;
 let isOnline = navigator.onLine;
 
 function initFirebase() {
+  return; // Firebase disabled
   if (typeof firebase === 'undefined') {
     setTimeout(initFirebase, 200);
     return;
