@@ -336,7 +336,7 @@ const CONFIG = {
   PASSWORDS: { admin: 'Trout@Oak#2026', reviewer: 'Family#Tree$225' },
   AI_PROXY: 'https://trout-ai-proxy.8z8n6z2tt4.workers.dev',
   GEDCOM_URL: 'TroutFamilyTree_local.ged',
-  PHOTOS_URL:  'photos_base64.json',
+  PHOTOS_URLS: ['photos_base64_1.json', 'photos_base64_2.json'],
 };
 
 // ═══════════════════════════════════════════
@@ -407,12 +407,17 @@ async function tryLoadRealData() {
       reloaded = true;
     }
   } catch(e) { /* use demo data */ }
-  // Try photos
+  // Try photos (split across two files)
   try {
-    const controller2 = new AbortController();
-    setTimeout(() => controller2.abort(), 5000);
-    const r2 = await fetch(CONFIG.PHOTOS_URL, { signal: controller2.signal });
-    if (r2.ok) { STATE.photos = await r2.json(); reloaded = true; }
+    const results = await Promise.all(CONFIG.PHOTOS_URLS.map(async url => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 10000);
+      const r = await fetch(url, { signal: controller.signal });
+      if (r.ok) return r.json();
+      return {};
+    }));
+    STATE.photos = Object.assign({}, ...results);
+    if (Object.keys(STATE.photos).length) reloaded = true;
   } catch(e) { /* no photos */ }
   // Rebuild views if real data loaded
   if (reloaded) {
@@ -464,6 +469,8 @@ function parseGEDCOM(text) {
         cur.surname = sm ? sm[1].trim() : '';
         cur.given = val.replace(/\/[^/]*\//, '').trim();
       }
+      else if (tag === 'GIVN') { cur.given = val; if (!cur.name) cur.name = (val + ' ' + cur.surname).trim(); }
+      else if (tag === 'SURN') { cur.surname = val; if (cur.given) cur.name = (cur.given + ' ' + val).trim(); }
       else if (tag === 'SEX') cur.sex = val;
       else if (tag === 'BIRT') { cur._evt = 'birth'; }
       else if (tag === 'DEAT') { cur._evt = 'death'; }
