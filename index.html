@@ -304,6 +304,7 @@
         <option value="6">6 generations</option>
       </select>
       <span id="tree-title" style="color:var(--muted);font-size:0.85rem;margin-left:auto;"></span>
+      <span id="db-status-indicator" style="font-size:0.78rem;font-weight:600;padding:0.25rem 0.75rem;border-radius:12px;background:#1a3a2a;color:#4caf84;white-space:nowrap;">⬤ Connecting…</span>
     </div>
     <div id="tree-canvas-wrap">
       <div class="tree-empty" id="tree-empty">
@@ -566,31 +567,19 @@ function initFirebase() {
 }
 
 function showDbStatus(msg, type) {
-  const bar = document.getElementById('db-status-bar');
-  if (!bar) return;
-  bar.textContent = msg;
-  bar.style.display = 'block';
-  bar.style.opacity = '1';
-  bar.style.transition = 'none';
-  if (type === 'success') {
-    bar.style.background = '#1a3a2a';
-    bar.style.color = '#4caf84';
-    bar.style.borderBottom = '1px solid #2d5a3d';
-  } else {
-    bar.style.background = '#3a2a1a';
-    bar.style.color = '#c49a2a';
-    bar.style.borderBottom = '1px solid #5a3d1a';
+  // Update the permanent indicator in the toolbar
+  const ind = document.getElementById('db-status-indicator');
+  if (ind) {
+    if (type === 'success') {
+      ind.textContent = '⬤ Database ready for updates';
+      ind.style.background = '#1a3a2a';
+      ind.style.color = '#4caf84';
+    } else {
+      ind.textContent = '⬤ Offline mode';
+      ind.style.background = '#3a2a1a';
+      ind.style.color = '#c49a2a';
+    }
   }
-  // Fade out after 5 seconds
-  setTimeout(() => {
-    bar.style.transition = 'opacity 1.5s';
-    bar.style.opacity = '0';
-    setTimeout(() => { 
-      bar.style.display = 'none'; 
-      bar.style.opacity = '1'; 
-      bar.style.transition = 'none';
-    }, 1500);
-  }, 5000);
 }
 
 // Save a person edit to Firestore
