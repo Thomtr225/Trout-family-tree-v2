@@ -22,6 +22,19 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.6; }
 
+
+  /* ── Biometric / device unlock ── */
+  .biometric-btn { width: 100%; padding: 0.7rem; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .biometric-btn:hover { background: #7a5c10; }
+  .biometric-icon { font-size: 1.2rem; }
+  .auth-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1rem 0; color: var(--muted); font-size: 0.78rem; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .biometric-setup-prompt { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-top: 1rem; text-align: left; font-size: 0.85rem; }
+  .biometric-setup-prompt p { margin-bottom: 0.75rem; color: var(--muted); }
+  .biometric-setup-actions { display: flex; gap: 0.5rem; }
+  .biometric-setup-actions button { flex: 1; padding: 0.5rem; border-radius: var(--radius); font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); }
+  .biometric-setup-actions .btn-enable { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .biometric-setup-actions .btn-skip { background: var(--surface); color: var(--muted); }
   /* ── Auth screen ── */
   #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; }
   .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem 2rem; max-width: 400px; width: 100%; text-align: center; }
@@ -41,10 +54,15 @@
 
   /* ── Top nav ── */
   nav { height: var(--nav-h); background: var(--ink); color: #fff; display: flex; align-items: center; padding: 0 1rem; gap: 0; position: sticky; top: 0; z-index: 100; flex-shrink: 0; }
-  .nav-brand { display: flex; align-items: center; gap: 0.5rem; margin-right: auto; }
-  .nav-brand span { font-family: Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--accent2); }
-  .nav-brand small { color: rgba(255,255,255,0.5); font-size: 0.75rem; margin-left: 0.5rem; }
-  .nav-tabs { display: flex; gap: 0; }
+  .nav-brand { display: flex; align-items: center; gap: 0.5rem; }
+  .nav-brand span { font-family: Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--accent2); white-space: nowrap; }
+  .nav-search-wrap { position: relative; flex: 1; max-width: 320px; margin: 0 1.25rem; }
+  .nav-search-input { width: 100%; padding: 0.4rem 0.75rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85rem; outline: none; transition: border-color 0.15s, background 0.15s; }
+  .nav-search-input::placeholder { color: rgba(255,255,255,0.45); }
+  .nav-search-input:focus { border-color: var(--accent2); background: rgba(255,255,255,0.14); }
+  .nav-role-pill { font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.75); white-space: nowrap; margin-right: 0.5rem; text-transform: capitalize; }
+  .toolbar-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .nav-tabs { display: flex; gap: 0; margin-right: auto; }
   .nav-tab { background: none; border: none; color: rgba(255,255,255,0.65); padding: 0 0.9rem; height: var(--nav-h); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
   .nav-tab:hover { color: #fff; }
   .nav-tab.active { color: #fff; border-bottom-color: var(--accent2); }
@@ -258,13 +276,29 @@
     <span class="tree-icon">🌳</span>
     <h1>Trout Family Tree</h1>
     <p class="subtitle">1,533 people · 391 families · Est. 1700s</p>
-    <div style="margin-top: 1.5rem; text-align: left;">
+
+    <div id="biometric-login-area" class="hidden" style="margin-top: 1.5rem;">
+      <button class="biometric-btn" onclick="biometricLogin()" id="biometric-login-btn">
+        <span class="biometric-icon">🔐</span> <span id="biometric-login-label">Unlock with Face ID / Touch ID</span>
+      </button>
+      <div class="auth-divider">or use password</div>
+    </div>
+
+    <div id="password-login-area" style="margin-top: 1.5rem; text-align: left;">
       <label>Username</label>
       <input type="text" id="username" autocomplete="username" placeholder="admin or reviewer" />
       <label>Password</label>
       <input type="password" id="password" autocomplete="current-password" placeholder="Enter password" />
       <button class="btn-primary" onclick="login()">Sign in</button>
       <p class="error" id="auth-error"></p>
+    </div>
+
+    <div id="biometric-setup-prompt" class="biometric-setup-prompt hidden">
+      <p><strong>Enable Face ID / Touch ID</strong><br>Skip typing your password next time on this device.</p>
+      <div class="biometric-setup-actions">
+        <button class="btn-enable" onclick="enableBiometric()">Enable</button>
+        <button class="btn-skip" onclick="skipBiometricSetup()">Not now</button>
+      </div>
     </div>
   </div>
 </div>
@@ -279,25 +313,29 @@
 <div id="app">
   <nav>
     <div class="nav-brand">
-      <span>🌳 Trout Family</span>
-      <small id="nav-role-badge"></small>
+      <span>🌳 Trout Family Tree</span>
+    </div>
+    <div class="nav-search-wrap">
+      <input type="text" class="nav-search-input" id="nav-search" placeholder="Search the tree…" oninput="filterNavSearch(this.value)" />
     </div>
     <div class="nav-tabs">
       <button class="nav-tab active" onclick="showPanel('tree')">Tree</button>
       <button class="nav-tab" onclick="showPanel('people')">People</button>
       <button class="nav-tab" onclick="showPanel('stats')">Stats</button>
       <button class="nav-tab" onclick="showPanel('photos')">Photos</button>
-      <button class="nav-tab" onclick="showPanel('bio')">AI Bio</button>
     </div>
     <span id="db-status-indicator" style="font-size:0.75rem;font-weight:600;padding:0.2rem 0.65rem;border-radius:10px;background:#1a3a2a;color:#4caf84;white-space:nowrap;margin-right:0.5rem;">⬤ Connecting…</span>
+    <span class="nav-role-pill" id="nav-role-badge"></span>
   <button class="nav-user" onclick="logout()" id="nav-user-btn">Sign out</button>
   </nav>
 
   <!-- Tree panel -->
   <div class="panel active" id="tree-panel">
     <div class="tree-toolbar">
-      <input type="text" class="search-input" id="tree-search" placeholder="Focus on: type a name…" style="max-width:240px;" oninput="filterTreeSearch(this.value)" />
+      <span class="toolbar-label">Focus on:</span>
+      <input type="text" class="search-input" id="tree-search" placeholder="Type a name…" style="max-width:240px;" oninput="filterTreeSearch(this.value)" />
       <button class="btn" onclick="resetToRoot()" id="reset-root-btn" style="white-space:nowrap;">Reset to Root</button>
+      <button class="btn btn-accent" onclick="openAddPersonModal()" id="add-person-btn" style="white-space:nowrap;">+ Add Person</button>
       <select id="tree-gen-depth" onchange="redrawTree()" style="max-width:160px;">
         <option value="3">3 generations</option>
         <option value="4" selected>4 generations</option>
@@ -498,6 +536,105 @@
 </div>
 
 <div class="edit-saved-toast" id="edit-toast">Changes saved</div>
+
+<!-- Add Person Modal -->
+<div class="edit-modal-backdrop hidden" id="add-person-modal" onclick="closeAddPersonModal(event)">
+  <div class="edit-modal" id="add-person-modal-content">
+    <div class="edit-modal-header">
+      <h2>Add a new person</h2>
+      <button class="modal-close" onclick="closeAddPersonModalBtn()" style="position:relative;top:auto;right:auto;">✕</button>
+    </div>
+    <div class="edit-modal-body">
+
+      <div class="edit-section">
+        <div class="edit-section-title">Sex</div>
+        <div class="sex-options">
+          <label class="sex-option"><input type="radio" name="add-sex" value="M" checked> Male</label>
+          <label class="sex-option"><input type="radio" name="add-sex" value="F"> Female</label>
+          <label class="sex-option"><input type="radio" name="add-sex" value="U"> Unknown</label>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Name</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>First (and middle) name</label>
+            <input type="text" id="add-given" placeholder="First Middle">
+          </div>
+          <div class="edit-field">
+            <label>Surname</label>
+            <input type="text" id="add-surname" placeholder="Surname">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Birth</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>Birth date</label>
+            <input type="text" id="add-birth-date" placeholder="e.g. 15 MAR 1950">
+          </div>
+          <div class="edit-field">
+            <label>Birth place</label>
+            <input type="text" id="add-birth-place" placeholder="City, State, Country">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Death</div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>Death date <span style="font-weight:400;color:var(--muted);">(leave blank if living)</span></label>
+            <input type="text" id="add-death-date" placeholder="e.g. 4 JAN 2020">
+          </div>
+          <div class="edit-field">
+            <label>Death place</label>
+            <input type="text" id="add-death-place" placeholder="City, State, Country">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Family connections (optional)</div>
+        <div class="edit-grid">
+          <div class="edit-field full">
+            <label>Father</label>
+            <input type="text" id="add-father-search" placeholder="Search and select father…" oninput="filterAddRelativeSearch(this.value, 'father')" autocomplete="off">
+            <input type="hidden" id="add-father-id">
+          </div>
+          <div class="edit-field full">
+            <label>Mother</label>
+            <input type="text" id="add-mother-search" placeholder="Search and select mother…" oninput="filterAddRelativeSearch(this.value, 'mother')" autocomplete="off">
+            <input type="hidden" id="add-mother-id">
+          </div>
+          <div class="edit-field full">
+            <label>Spouse</label>
+            <input type="text" id="add-spouse-search" placeholder="Search and select spouse…" oninput="filterAddRelativeSearch(this.value, 'spouse')" autocomplete="off">
+            <input type="hidden" id="add-spouse-id">
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="edit-section-title">Notes</div>
+        <div class="edit-field full">
+          <textarea id="add-notes" placeholder="Add biographical notes…"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="edit-modal-footer">
+      <button class="btn" onclick="closeAddPersonModalBtn()">Cancel</button>
+      <button class="btn btn-accent" onclick="saveNewPerson()">Add person</button>
+    </div>
+  </div>
+</div>
+
+<div id="autocomplete-add-relative" style="position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:240px; overflow-y:auto; z-index:600; display:none; min-width:260px;"></div>
+
 <!-- Person detail modal -->
 <div class="modal-backdrop hidden" id="person-modal" onclick="closeModal(event)">
   <div class="modal" id="modal-content">
@@ -527,6 +664,7 @@
 </div>
 <!-- Tree search autocomplete dropdown (appended to body) -->
 <div id="autocomplete-tree" style="position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:260px; overflow-y:auto; z-index:500; display:none; min-width:260px;"></div>
+<div id="autocomplete-nav" style="position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:300px; overflow-y:auto; z-index:500; display:none; min-width:260px;"></div>
 <div id="autocomplete-bio" style="position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:260px; overflow-y:auto; z-index:500; display:none; min-width:260px;"></div>
 
 <script>
@@ -670,27 +808,162 @@ let STATE = {
 // ═══════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════
+let pendingBiometricRole = null;
+
 function login() {
   const u = document.getElementById('username').value.trim().toLowerCase();
   const p = document.getElementById('password').value;
   if (CONFIG.PASSWORDS[u] && CONFIG.PASSWORDS[u] === p) {
-    STATE.role = u;
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('nav-role-badge').textContent = u;
-    document.getElementById('nav-user-btn').textContent = u + ' · sign out';
-    initApp();
+    completeLogin(u);
   } else {
     document.getElementById('auth-error').textContent = 'Incorrect username or password.';
   }
 }
+
+function completeLogin(role) {
+  STATE.role = role;
+  document.getElementById('nav-role-badge').textContent = role;
+  document.getElementById('nav-user-btn').textContent = role + ' · sign out';
+
+  // If this device has no biometric credential yet, offer to set one up
+  const hasCredential = localStorage.getItem('trout-webauthn-credential');
+  if (!hasCredential && window.PublicKeyCredential) {
+    pendingBiometricRole = role;
+    document.getElementById('password-login-area').classList.add('hidden');
+    document.getElementById('biometric-login-area').classList.add('hidden');
+    document.getElementById('biometric-setup-prompt').classList.remove('hidden');
+    return;
+  }
+
+  finishLoginAndEnterApp();
+}
+
+function finishLoginAndEnterApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('biometric-setup-prompt').classList.add('hidden');
+  document.getElementById('password-login-area').classList.remove('hidden');
+  initApp();
+}
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('auth-screen').style.display !== 'none') login();
+  if (e.key === 'Enter' && document.getElementById('auth-screen').style.display !== 'none' && !document.getElementById('password-login-area').classList.contains('hidden')) login();
 });
+
 function logout() {
   STATE.role = null;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').classList.remove('visible');
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('auth-error').textContent = '';
+  showBiometricLoginIfAvailable();
 }
+
+// ═══════════════════════════════════════════
+// BIOMETRIC LOGIN (WebAuthn — Face ID / Touch ID / Windows Hello / Android biometrics)
+// ═══════════════════════════════════════════
+
+function bufToBase64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function base64urlToBuf(b64url) {
+  const b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+  const pad = b64.length % 4 ? '='.repeat(4 - b64.length % 4) : '';
+  const str = atob(b64 + pad);
+  const buf = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
+  return buf.buffer;
+}
+
+async function enableBiometric() {
+  if (!window.PublicKeyCredential) {
+    showToast('Biometric login is not supported on this device');
+    finishLoginAndEnterApp();
+    return;
+  }
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Trout Family Tree' },
+        user: {
+          id: userId,
+          name: pendingBiometricRole,
+          displayName: pendingBiometricRole === 'admin' ? 'Admin' : 'Reviewer'
+        },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required'
+        },
+        timeout: 60000,
+        attestation: 'none'
+      }
+    });
+
+    // Store credential ID and the role it unlocks, scoped to this device/browser
+    localStorage.setItem('trout-webauthn-credential', bufToBase64url(credential.rawId));
+    localStorage.setItem('trout-webauthn-role', pendingBiometricRole);
+    showToast('Face ID / Touch ID enabled for this device');
+  } catch (e) {
+    console.warn('Biometric setup failed or cancelled:', e.message);
+    showToast('Biometric setup skipped');
+  }
+  finishLoginAndEnterApp();
+}
+
+function skipBiometricSetup() {
+  finishLoginAndEnterApp();
+}
+
+function showBiometricLoginIfAvailable() {
+  const credId = localStorage.getItem('trout-webauthn-credential');
+  const role = localStorage.getItem('trout-webauthn-role');
+  const area = document.getElementById('biometric-login-area');
+  const label = document.getElementById('biometric-login-label');
+  if (credId && role && window.PublicKeyCredential) {
+    area.classList.remove('hidden');
+    label.textContent = `Unlock as ${role === 'admin' ? 'Admin' : 'Reviewer'}`;
+  } else {
+    area.classList.add('hidden');
+  }
+}
+
+async function biometricLogin() {
+  const credId = localStorage.getItem('trout-webauthn-credential');
+  const role = localStorage.getItem('trout-webauthn-role');
+  if (!credId || !role) return;
+
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: base64urlToBuf(credId), type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    if (assertion) {
+      completeLogin(role);
+      // Required-after-setup: skip straight into the app once biometric succeeds
+      if (!document.getElementById('biometric-setup-prompt').classList.contains('hidden')) {
+        finishLoginAndEnterApp();
+      } else {
+        finishLoginAndEnterApp();
+      }
+    }
+  } catch (e) {
+    console.warn('Biometric login failed or cancelled:', e.message);
+    document.getElementById('auth-error').textContent = 'Biometric unlock failed. Use your password instead.';
+  }
+}
+
+// Check on page load whether this device has biometric login set up
+showBiometricLoginIfAvailable();
 
 // ═══════════════════════════════════════════
 // INIT
@@ -886,7 +1159,7 @@ function showPanel(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(name + '-panel').classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
-  const panelNames = ['tree','people','stats','photos','bio'];
+  const panelNames = ['tree','people','stats','photos'];
   tabs[panelNames.indexOf(name)]?.classList.add('active');
   STATE.currentPanel = name;
 }
@@ -1115,6 +1388,27 @@ function resetToRoot() {
   if (!rootPersonId) return;
   document.getElementById('tree-search').value = '';
   centerTreeOn(rootPersonId);
+}
+
+function filterNavSearch(q) {
+  const ac = document.getElementById('autocomplete-nav');
+  if (!q || q.length < 2) { ac.style.display = 'none'; return; }
+  const inp = document.getElementById('nav-search');
+  const rect = inp.getBoundingClientRect();
+  ac.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  ac.style.left = rect.left + 'px';
+  ac.style.width = Math.max(rect.width, 260) + 'px';
+  const matches = Object.values(STATE.people).filter(p => personName(p).toLowerCase().includes(q.toLowerCase())).slice(0,12);
+  if (!matches.length) { ac.innerHTML = '<div style="padding:10px 12px;font-size:0.85rem;color:var(--muted);">No results</div>'; ac.style.display = 'block'; return; }
+  ac.innerHTML = matches.map(p => `<div style="padding:8px 12px;cursor:pointer;font-size:0.88rem;border-bottom:1px solid var(--border);color:var(--ink);" onmousedown="navSearchSelect('${p.id}')">${personName(p)} <span style="color:var(--muted);font-size:0.78rem;">${personYears(p)}</span></div>`).join('');
+  ac.style.display = 'block';
+}
+
+function navSearchSelect(id) {
+  document.getElementById('autocomplete-nav').style.display = 'none';
+  document.getElementById('nav-search').value = '';
+  showPanel('tree');
+  centerTreeOn(id);
 }
 
 function filterTreeSearch(q) {
@@ -1664,6 +1958,156 @@ function savePersonEdit() {
   if (STATE.currentPanel === 'tree') redrawTree();
 }
 
+// ═══════════════════════════════════════════
+// ADD PERSON
+// ═══════════════════════════════════════════
+let addRelativeSelections = { father: null, mother: null, spouse: null };
+
+function openAddPersonModal() {
+  document.getElementById('add-given').value = '';
+  document.getElementById('add-surname').value = '';
+  document.getElementById('add-birth-date').value = '';
+  document.getElementById('add-birth-place').value = '';
+  document.getElementById('add-death-date').value = '';
+  document.getElementById('add-death-place').value = '';
+  document.getElementById('add-notes').value = '';
+  document.getElementById('add-father-search').value = '';
+  document.getElementById('add-mother-search').value = '';
+  document.getElementById('add-spouse-search').value = '';
+  document.querySelector('input[name="add-sex"][value="M"]').checked = true;
+  addRelativeSelections = { father: null, mother: null, spouse: null };
+  document.getElementById('add-person-modal').classList.remove('hidden');
+}
+
+function closeAddPersonModal(e) { if (e.target === document.getElementById('add-person-modal')) closeAddPersonModalBtn(); }
+function closeAddPersonModalBtn() { document.getElementById('add-person-modal').classList.add('hidden'); }
+
+function filterAddRelativeSearch(q, role) {
+  const ac = document.getElementById('autocomplete-add-relative');
+  if (!q || q.length < 2) { ac.style.display = 'none'; return; }
+  const inputId = 'add-' + role + '-search';
+  const inp = document.getElementById(inputId);
+  const rect = inp.getBoundingClientRect();
+  ac.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  ac.style.left = rect.left + 'px';
+  ac.style.width = rect.width + 'px';
+  const matches = Object.values(STATE.people).filter(p => personName(p).toLowerCase().includes(q.toLowerCase())).slice(0,10);
+  if (!matches.length) { ac.innerHTML = '<div style="padding:8px 12px;font-size:0.85rem;color:var(--muted);">No results</div>'; ac.style.display = 'block'; return; }
+  ac.innerHTML = matches.map(p => `<div style="padding:8px 12px;cursor:pointer;font-size:0.88rem;border-bottom:1px solid var(--border);color:var(--ink);" onmousedown="selectAddRelative('${p.id}','${role}')">${personName(p)} <span style="color:var(--muted);font-size:0.78rem;">${personYears(p)}</span></div>`).join('');
+  ac.style.display = 'block';
+}
+
+function selectAddRelative(id, role) {
+  addRelativeSelections[role] = id;
+  document.getElementById('add-' + role + '-search').value = personName(STATE.people[id]);
+  document.getElementById('autocomplete-add-relative').style.display = 'none';
+}
+
+function saveNewPerson() {
+  const given = document.getElementById('add-given').value.trim();
+  const surname = document.getElementById('add-surname').value.trim();
+  if (!given && !surname) {
+    alert('Please enter at least a first or last name.');
+    return;
+  }
+  const sex = document.querySelector('input[name="add-sex"]:checked')?.value || 'U';
+
+  // Generate a new unique ID
+  const existingIds = Object.keys(STATE.people).map(id => {
+    const m = id.match(/I(\d+)/);
+    return m ? parseInt(m[1]) : 0;
+  });
+  const newNum = (existingIds.length ? Math.max(...existingIds) : 500000) + 1;
+  const newId = '@I' + newNum + '@';
+
+  const newPerson = {
+    id: newId,
+    name: [given, surname].filter(Boolean).join(' '),
+    given, surname, sex,
+    birth: {
+      date: document.getElementById('add-birth-date').value.trim(),
+      place: document.getElementById('add-birth-place').value.trim()
+    },
+    death: {
+      date: document.getElementById('add-death-date').value.trim(),
+      place: document.getElementById('add-death-place').value.trim()
+    },
+    events: [], famsS: [], famcS: [],
+    notes: (document.getElementById('add-notes').value.trim() ? [document.getElementById('add-notes').value.trim()] : []),
+    photo: null
+  };
+
+  STATE.people[newId] = newPerson;
+
+  // Link to father/mother via a family record
+  const father = addRelativeSelections.father;
+  const mother = addRelativeSelections.mother;
+  if (father || mother) {
+    const famId = '@F' + (newNum + 90000) + '@';
+    STATE.families[famId] = { id: famId, husb: father || null, wife: mother || null, chil: [newId], marr: {} };
+    newPerson.famcS.push(famId);
+    if (father && STATE.people[father]) { STATE.people[father].famsS = STATE.people[father].famsS || []; STATE.people[father].famsS.push(famId); }
+    if (mother && STATE.people[mother]) { STATE.people[mother].famsS = STATE.people[mother].famsS || []; STATE.people[mother].famsS.push(famId); }
+  }
+
+  // Link to spouse via a family record
+  const spouse = addRelativeSelections.spouse;
+  if (spouse && STATE.people[spouse]) {
+    const famId2 = '@F' + (newNum + 91000) + '@';
+    const isMale = sex === 'M';
+    STATE.families[famId2] = {
+      id: famId2,
+      husb: isMale ? newId : spouse,
+      wife: isMale ? spouse : newId,
+      chil: [], marr: {}
+    };
+    newPerson.famsS.push(famId2);
+    STATE.people[spouse].famsS = STATE.people[spouse].famsS || [];
+    STATE.people[spouse].famsS.push(famId2);
+  }
+
+  // Save to localStorage
+  try {
+    const edits = JSON.parse(localStorage.getItem('trout-edits') || '{}');
+    edits[newId] = newPerson;
+    localStorage.setItem('trout-edits', JSON.stringify(edits));
+    const newPeople = JSON.parse(localStorage.getItem('trout-new-people') || '{}');
+    newPeople[newId] = newPerson;
+    localStorage.setItem('trout-new-people', JSON.stringify(newPeople));
+
+    const newFamilies = JSON.parse(localStorage.getItem('trout-new-families') || '{}');
+    newPerson.famcS.forEach(fid => { if (STATE.families[fid]) newFamilies[fid] = STATE.families[fid]; });
+    newPerson.famsS.forEach(fid => { if (STATE.families[fid]) newFamilies[fid] = STATE.families[fid]; });
+    localStorage.setItem('trout-new-families', JSON.stringify(newFamilies));
+
+    // Persist updated famsS on existing relatives too
+    [father, mother, spouse].forEach(rid => {
+      if (rid && STATE.people[rid]) {
+        edits[rid] = edits[rid] || {};
+        edits[rid].famsS = STATE.people[rid].famsS;
+      }
+    });
+    localStorage.setItem('trout-edits', JSON.stringify(edits));
+  } catch(e) {}
+
+  // Save to Firebase
+  fbSavePerson(newId, {
+    given: newPerson.given, surname: newPerson.surname, name: newPerson.name,
+    sex: newPerson.sex, birth: newPerson.birth, death: newPerson.death,
+    notes: newPerson.notes, famsS: newPerson.famsS, famcS: newPerson.famcS,
+    updatedAt: new Date().toISOString(), updatedBy: STATE.role, isNewPerson: true
+  });
+
+  closeAddPersonModalBtn();
+  showToast(personName(newPerson) + ' added');
+
+  // Refresh views
+  buildPeopleView();
+  buildStats();
+  populateSurnameFilter();
+  if (STATE.currentPanel === 'tree' && treePerson) redrawTree();
+}
+
 function loadStoredPhotos() {
   try {
     const stored = JSON.parse(localStorage.getItem('trout-photos') || '{}');
@@ -1676,6 +2120,16 @@ function loadSavedEdits() {
     const edits = JSON.parse(localStorage.getItem('trout-edits') || '{}');
     Object.entries(edits).forEach(([id, data]) => {
       if (STATE.people[id]) Object.assign(STATE.people[id], data);
+    });
+  } catch(e) {}
+  try {
+    const newPeople = JSON.parse(localStorage.getItem('trout-new-people') || '{}');
+    Object.entries(newPeople).forEach(([id, data]) => {
+      if (!STATE.people[id]) STATE.people[id] = data;
+    });
+    const newFamilies = JSON.parse(localStorage.getItem('trout-new-families') || '{}');
+    Object.entries(newFamilies).forEach(([id, data]) => {
+      if (!STATE.families[id]) STATE.families[id] = data;
     });
   } catch(e) {}
 }
@@ -1737,6 +2191,8 @@ document.addEventListener('click', e => {
     document.getElementById('autocomplete-tree').style.display = 'none';
   if (!e.target.closest('#bio-search') && !e.target.closest('#autocomplete-bio'))
     document.getElementById('autocomplete-bio').style.display = 'none';
+  if (!e.target.closest('#nav-search') && !e.target.closest('#autocomplete-nav'))
+    document.getElementById('autocomplete-nav').style.display = 'none';
 });
 
 // Keyboard close
@@ -1747,6 +2203,7 @@ document.addEventListener('keydown', e => {
     closeGalleryLb();
     document.getElementById('autocomplete-tree').style.display = 'none';
     document.getElementById('autocomplete-bio').style.display = 'none';
+    document.getElementById('autocomplete-nav').style.display = 'none';
   }
   if (!document.getElementById('gallery-lb').classList.contains('hidden')) {
     if (e.key === 'ArrowLeft') glbNav(-1);
