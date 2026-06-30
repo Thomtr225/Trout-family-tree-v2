@@ -536,7 +536,7 @@ const CONFIG = {
   PASSWORDS: { admin: 'Trout@Oak#2026', reviewer: 'Family#Tree$225' },
   AI_PROXY: 'https://trout-ai-proxy.8z8n6z2tt4.workers.dev',
   GEDCOM_URL: 'TroutFamilyTree_local.ged',
-  PHOTOS_URLS: ['photos_base64_1.json', 'photos_base64_2.json'],  // add more if needed
+  PHOTOS_URLS: ['photos_base64_1.json'],  // add more files here if needed
 };
 
 
@@ -557,28 +557,33 @@ function initFirebase() {
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    console.log('Firebase connected');
-    // Delay so nav bar is visible first
-    setTimeout(() => showDbStatus('✓ Connected to Trout Family Tree database', 'success'), 600);
+    // Test connection with a real read
+    db.collection('individuals').limit(1).get()
+      .then(() => {
+        console.log('Firebase connected');
+        showDbStatus('success');
+      })
+      .catch(e => {
+        console.warn('Firestore read failed:', e.message);
+        showDbStatus('offline');
+      });
   } catch(e) {
     console.warn('Firebase init failed:', e.message);
-    setTimeout(() => showDbStatus('⚠ Running in offline mode', 'warning'), 600);
+    showDbStatus('offline');
   }
 }
 
-function showDbStatus(msg, type) {
-  // Update the permanent indicator in the toolbar
+function showDbStatus(type) {
   const ind = document.getElementById('db-status-indicator');
-  if (ind) {
-    if (type === 'success') {
-      ind.textContent = '⬤ Database ready for updates';
-      ind.style.background = '#1a3a2a';
-      ind.style.color = '#4caf84';
-    } else {
-      ind.textContent = '⬤ Offline mode';
-      ind.style.background = '#3a2a1a';
-      ind.style.color = '#c49a2a';
-    }
+  if (!ind) return;
+  if (type === 'success') {
+    ind.textContent = '⬤ Database ready for updates';
+    ind.style.background = '#1a3a2a';
+    ind.style.color = '#4caf84';
+  } else {
+    ind.textContent = '⬤ Offline mode';
+    ind.style.background = '#3a2a1a';
+    ind.style.color = '#c49a2a';
   }
 }
 
