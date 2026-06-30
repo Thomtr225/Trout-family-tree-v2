@@ -970,6 +970,7 @@ showBiometricLoginIfAvailable();
 // ═══════════════════════════════════════════
 function initApp() {
   document.getElementById('app').classList.add('visible');
+  showPanel('tree');
   initFirebase();
   // Load demo data immediately so UI is never blocked
   parseGEDCOM(getDemoGEDCOM());
@@ -1114,7 +1115,8 @@ function parseGEDCOM(text) {
 // ═══════════════════════════════════════════
 function personName(p) {
   if (!p) return 'Unknown';
-  return p.name || [p.given, p.surname].filter(Boolean).join(' ') || p.id;
+  const name = p.name || [p.given, p.surname].filter(Boolean).join(' ');
+  return name && name.trim() ? name.trim() : 'Unknown';
 }
 function personYears(p) {
   if (!p) return '';
@@ -1143,8 +1145,13 @@ function avatarHTML(id, size=44) {
   return `<span style="font-size:${Math.round(size*0.4)}px;">${initials(p)}</span>`;
 }
 
+function hasRealName(p) {
+  const name = (p.name || [p.given, p.surname].filter(Boolean).join(' ')).trim();
+  return !!name;
+}
+
 function sortedPeople() {
-  return Object.values(STATE.people).sort((a,b) => {
+  return Object.values(STATE.people).filter(hasRealName).sort((a,b) => {
     const an = (a.surname || '') + (a.given || '');
     const bn = (b.surname || '') + (b.given || '');
     return an.localeCompare(bn);
@@ -1155,9 +1162,14 @@ function sortedPeople() {
 // PANEL NAVIGATION
 // ═══════════════════════════════════════════
 function showPanel(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(name + '-panel').classList.add('active');
+  const target = document.getElementById(name + '-panel');
+  target.classList.add('active');
+  target.style.display = 'block';
   const tabs = document.querySelectorAll('.nav-tab');
   const panelNames = ['tree','people','stats','photos'];
   tabs[panelNames.indexOf(name)]?.classList.add('active');
@@ -1509,7 +1521,7 @@ function renderTreeCards(rootId, depth) {
 // STATS VIEW
 // ═══════════════════════════════════════════
 function buildStats() {
-  const people = Object.values(STATE.people);
+  const people = sortedPeople();
   const fams = Object.values(STATE.families);
   const withPhotos = people.filter(p => STATE.photos[p.id]);
 
