@@ -762,19 +762,86 @@ async function fbSavePerson(id, data) {
   } catch(e) { console.warn('Firebase save failed:', e.message); }
 }
 
-// Save a photo array to Firestore
+// Compress image to under 800KB for Firestore storage
+async function compressImageForFirestore(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      const maxDim = 600;
+      if (w > maxDim || h > maxDim) {
+        const ratio = maxDim / Math.max(w, h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      // Try quality levels until under 700KB
+      let quality = 0.7;
+      let result = canvas.toDataURL('image/jpeg', quality);
+      while (result.length > 700000 && quality > 0.2) {
+        quality -= 0.1;
+        result = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(result);
+    };
+    img.src = dataUrl;
+  });
+}
+
+// Save photos to Firestore as compressed base64
 async function fbSavePhotos(id, photos) {
   if (!db) return;
   try {
     const docId = id.replace(/[@]/g, '');
-    // Store only first photo in firebase (base64 too large for multiple)
-    // Full array stays in localStorage
-    await db.collection('photos').doc(docId).set({ 
-      hasPhotos: true, 
+    // Compress each photo and save to Firestore
+    // Save photos in separate numbered documents to stay under 1MB limit
+    for (let i = 0; i < photos.length; i++) {
+      const compressed = await compressImageForFirestore(photos[i]);
+      await db.collection('userPhotos').doc(docId + '_' + i).set({
+        personId: id,
+        index: i,
+        data: compressed,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    // Save a count doc so we know how many photos exist
+    await db.collection('userPhotoIndex').doc(docId).set({
+      personId: id,
       count: photos.length,
-      primary: photos[0] || null 
-    }, { merge: true });
+      updatedAt: new Date().toISOString()
+    });
+    console.log('Saved ' + photos.length + ' photos for ' + id);
   } catch(e) { console.warn('Firebase photo save failed:', e.message); }
+}
+
+// Load all user-uploaded photos from Firestore on startup
+async function fbLoadAllPhotos() {
+  if (!db) return;
+  try {
+    const indexSnap = await db.collection('userPhotoIndex').get();
+    if (indexSnap.empty) return;
+    // Load each person's photos
+    const promises = [];
+    indexSnap.forEach(doc => {
+      const id = doc.data().personId;
+      const count = doc.data().count || 0;
+      const docId = id.replace(/[@]/g, '');
+      const personPromise = Promise.all(
+        Array.from({length: count}, (_, i) =>
+          db.collection('userPhotos').doc(docId + '_' + i).get()
+        )
+      ).then(docs => {
+        const photos = docs.map(d => d.exists ? d.data().data : null).filter(Boolean);
+        if (photos.length) STATE.photos[id] = photos;
+      });
+      promises.push(personPromise);
+    });
+    await Promise.all(promises);
+    console.log('Loaded Firebase photos for ' + indexSnap.size + ' people');
+  } catch(e) { console.warn('Firebase photo load failed:', e.message); }
 }
 
 // Load all person edits from Firestore and apply to STATE
@@ -1044,10 +1111,38 @@ async function tryLoadRealData() {
 // ═══════════════════════════════════════════
 
 
+function stripHtmlEntities(text) {
+  return text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/<\/?p[^>]*>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n').map(l => l.trim()).join('\n')
+    .trim();
+}
+
 function parseGEDCOM(text) {
   const lines = text.split(/\r?\n/);
   let cur = null, curType = null;
-  
+  let noteBuffer = null; // string being assembled for the active NOTE
+  let noteLevel = null;  // the level the NOTE tag was declared at
+
+  function flushNote() {
+    if (cur && noteBuffer !== null && noteBuffer.trim()) {
+      const clean = stripHtmlEntities(noteBuffer);
+      if (clean) cur.notes.push(clean);
+    }
+    noteBuffer = null;
+    noteLevel = null;
+  }
+
   for (const line of lines) {
     const m = line.match(/^(\d)\s+(@\S+@|\S+)(.*)?$/);
     if (!m) continue;
@@ -1056,6 +1151,7 @@ function parseGEDCOM(text) {
     const val = (m[3] || '').trim();
 
     if (level === 0) {
+      flushNote();
       if (tag.startsWith('@I')) {
         cur = { id: tag, name: '', given: '', surname: '', sex: '', birth: {}, death: {}, events: [], famsS: [], famcS: [], notes: [], photo: null };
         STATE.people[tag] = cur;
@@ -1071,6 +1167,20 @@ function parseGEDCOM(text) {
     }
 
     if (!cur) continue;
+
+    // Handle note continuation lines first, regardless of curType
+    if (noteBuffer !== null && level === noteLevel + 1 && tag === 'CONC') {
+      noteBuffer += val;
+      continue;
+    }
+    if (noteBuffer !== null && level === noteLevel + 1 && tag === 'CONT') {
+      noteBuffer += '\n' + val;
+      continue;
+    }
+    // Any other tag at or above the note's level ends the note
+    if (noteBuffer !== null && level <= noteLevel) {
+      flushNote();
+    }
 
     if (curType === 'INDI') {
       if (tag === 'NAME') {
@@ -1095,7 +1205,10 @@ function parseGEDCOM(text) {
       }
       else if (tag === 'FAMS') cur.famsS.push(val);
       else if (tag === 'FAMC') cur.famcS.push(val);
-      else if (tag === 'NOTE' || tag === 'CONT') { if (val) cur.notes.push(val); }
+      else if (tag === 'NOTE') {
+        noteBuffer = val;
+        noteLevel = level;
+      }
       else if (tag === 'OBJE' || tag === 'FILE') { /* handled via photos JSON */ }
     } else if (curType === 'FAM') {
       if (tag === 'HUSB') cur.husb = val;
@@ -1106,6 +1219,7 @@ function parseGEDCOM(text) {
       else if (tag === 'PLAC' && cur._evt === 'marr') cur.marr.place = val;
     }
   }
+  flushNote();
 }
 
 
@@ -1324,7 +1438,12 @@ function openPerson(id) {
   }
 
   if (p.notes?.length) {
-    bodyHTML += `<div class="detail-section"><h3>Notes</h3><p style="font-size:0.88rem;color:var(--muted);line-height:1.7;">${p.notes.join('<br>')}</p></div>`;
+    const notesHtml = p.notes.map(note => {
+      const escaped = note.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const paragraphs = escaped.split(/\n\s*\n/).filter(seg => seg.trim());
+      return paragraphs.map(seg => `<p style="margin-bottom:0.75rem;">${seg.replace(/\n/g,'<br>')}</p>`).join('');
+    }).join('<div style="border-top:1px solid var(--border);margin:1rem 0;"></div>');
+    bodyHTML += `<div class="detail-section"><h3>Notes & Biography</h3><div style="font-size:0.88rem;color:var(--ink);line-height:1.7;max-height:400px;overflow-y:auto;">${notesHtml}</div></div>`;
   }
 
   // Photos strip - always show, with add button for admin
@@ -1660,27 +1779,30 @@ function handlePhotoUpload(event) {
   if (!STATE.photos[id]) STATE.photos[id] = [];
 
   let loaded = 0;
+  showToast('Uploading photo…');
   files.forEach((file, fi) => {
     const reader = new FileReader();
     reader.onload = e => {
       if (replaceIdx >= 0 && fi === 0) {
-        // Replace the primary/profile photo at that index
         STATE.photos[id][replaceIdx] = e.target.result;
       } else {
         STATE.photos[id].push(e.target.result);
       }
       loaded++;
-      try {
-        const photoEdits = JSON.parse(localStorage.getItem('trout-photo-edits') || '{}');
-        photoEdits[id] = STATE.photos[id];
-        localStorage.setItem('trout-photo-edits', JSON.stringify(photoEdits));
-      } catch(err) {}
       if (loaded === files.length) {
         uploadReplaceIndex = -1;
-        fbSavePhotos(id, STATE.photos[id]);
-        showToast(replaceIdx >= 0 ? 'Profile photo updated' : `${loaded} photo${loaded>1?'s':''} added`);
-        openPerson(id);
-        buildGallery();
+        // Save to localStorage as immediate fallback
+        try {
+          const photoEdits = JSON.parse(localStorage.getItem('trout-photo-edits') || '{}');
+          photoEdits[id] = STATE.photos[id];
+          localStorage.setItem('trout-photo-edits', JSON.stringify(photoEdits));
+        } catch(err) {}
+        // Upload to Firebase Storage (permanent)
+        fbSavePhotos(id, STATE.photos[id]).then(() => {
+          showToast(replaceIdx >= 0 ? '✓ Profile photo saved' : `✓ ${loaded} photo${loaded>1?'s':''} saved`);
+          openPerson(id);
+          buildGallery();
+        });
       }
     };
     reader.readAsDataURL(file);
