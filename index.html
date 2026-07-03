@@ -1194,10 +1194,10 @@ function parseGEDCOM(text) {
       else if (tag === 'GIVN') { cur.given = val; if (!cur.name) cur.name = (val + ' ' + cur.surname).trim(); }
       else if (tag === 'SURN') { cur.surname = val; if (cur.given) cur.name = (cur.given + ' ' + val).trim(); }
       else if (tag === 'SEX') cur.sex = val;
-      else if (tag === 'BIRT') { cur._evt = 'birth'; cur._evtLevel = level; }
-      else if (tag === 'DEAT') { cur._evt = 'death'; cur._evtLevel = level; }
+      else if (tag === 'BIRT') { if (!cur.birth.date) { cur._evt = 'birth'; cur._evtLevel = level; } else { cur._evt = null; cur._evtLevel = null; } }
+      else if (tag === 'DEAT') { if (!cur.death.date) { cur._evt = 'death'; cur._evtLevel = level; } else { cur._evt = null; cur._evtLevel = null; } }
       else if (tag === 'MARR') { cur._evt = 'marr'; cur._evtLevel = level; }
-      else if (tag === 'RESI' || tag === 'SOUR' || tag === 'OBJE') { cur._evt = null; cur._evtLevel = null; }
+      else if (tag === 'RESI' || tag === 'SOUR' || tag === 'OBJE' || tag === 'CENS' || tag === 'BURI') { cur._evt = null; cur._evtLevel = null; }
       else if (tag === 'DATE' && cur._evt && level === (cur._evtLevel || 0) + 1) {
         cur[cur._evt === 'marr' ? 'events' : cur._evt].date = val;
         if (cur._evt === 'marr') cur.events.push({ type:'Marriage', date: val });
