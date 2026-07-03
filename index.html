@@ -143,6 +143,8 @@
   .tree-card.male { border-top-color: #4a7ab5; }
   .tree-card.female { border-top-color: #b5507a; }
   .tree-card.root { border-top-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .tree-card.spouse { border-top-color: var(--accent2); border-style: dashed; }
+  .gen-section-root { border-top: 2px solid var(--accent); border-bottom: 2px solid var(--accent); padding: 1rem 0; margin: 0.5rem 0; background: rgba(139,105,20,0.04); border-radius: 8px; }
   .tc-photo { width: 72px; height: 72px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); overflow: hidden; margin: 0 auto 0.6rem; display: flex; align-items: center; justify-content: center; font-family: Georgia, serif; font-size: 1.3rem; color: var(--muted); }
   .tree-card.male .tc-photo { border-color: #4a7ab5; }
   .tree-card.female .tc-photo { border-color: #b5507a; }
@@ -1597,7 +1599,46 @@ function getAncestorsByGen(id, maxDepth) {
   return gens;
 }
 
-function makeTreeCard(id, isRoot=false) {
+function getDescendantsByGen(id, maxDepth) {
+  // Returns array of arrays: [gen0=[self], gen1=[spouse+children], gen2=[grandchildren], ...]
+  const gens = [[id]];
+  const seen = new Set([id]);
+
+  for (let g = 1; g < maxDepth; g++) {
+    const prev = gens[g-1];
+    const next = [];
+    prev.forEach(pid => {
+      if (!pid) return;
+      const p = STATE.people[pid];
+      if (!p) return;
+      // Get spouses and children from famsS
+      (p.famsS || []).forEach(fid => {
+        const fam = STATE.families[fid];
+        if (!fam) return;
+        // Add spouse (only at first generation below root)
+        if (g === 1) {
+          const spouseId = fam.husb === pid ? fam.wife : fam.husb;
+          if (spouseId && !seen.has(spouseId)) {
+            seen.add(spouseId);
+            next.push({ id: spouseId, isSpouse: true });
+          }
+        }
+        // Add children
+        (fam.chil || []).forEach(cid => {
+          if (!seen.has(cid)) {
+            seen.add(cid);
+            next.push({ id: cid, isSpouse: false });
+          }
+        });
+      });
+    });
+    if (!next.length) break;
+    gens.push(next.map(n => n.id));
+  }
+  return gens;
+}
+
+function makeTreeCard(id, isRoot=false, isSpouse=false) {
   if (!id) return `<div class="tree-card" style="visibility:hidden;"></div>`;
   const p = STATE.people[id];
   if (!p) return '';
@@ -1605,8 +1646,9 @@ function makeTreeCard(id, isRoot=false) {
   const photoHTML = photo ? `<img src="${photo}" alt="${personName(p)}" loading="lazy">` : `<span>${initials(p)}</span>`;
   const sexClass = p.sex === 'M' ? 'male' : p.sex === 'F' ? 'female' : '';
   const rootClass = isRoot ? ' root' : '';
+  const spouseClass = isSpouse ? ' spouse' : '';
   const place = p.birth?.place ? p.birth.place.split(',')[0].trim() : '';
-  return `<div class="tree-card ${sexClass}${rootClass}" onclick="openPerson('${id}')">
+  return `<div class="tree-card ${sexClass}${rootClass}${spouseClass}" onclick="openPerson('${id}')">
     <div class="tc-photo">${photoHTML}</div>
     <div class="tc-name">${personName(p)}</div>
     <div class="tc-years">${personYears(p)}</div>
@@ -1614,19 +1656,47 @@ function makeTreeCard(id, isRoot=false) {
   </div>`;
 }
 
+const DESC_LABELS = ['','Spouse & Children','Grandchildren','Great-grandchildren','2nd Great-grandchildren','3rd Great-grandchildren'];
+
 function renderTreeCards(rootId, depth) {
-  const gens = getAncestorsByGen(rootId, depth);
+  const ancGens = getAncestorsByGen(rootId, depth);
+  const descGens = getDescendantsByGen(rootId, Math.min(depth, 4));
   const container = document.getElementById('tree-cards');
   let html = '';
 
-  // Reverse: oldest generation at top, root person at bottom
-  const reversed = [...gens].reverse();
+  // ── ANCESTORS (oldest at top) ──
+  const reversed = [...ancGens].reverse();
   reversed.forEach((gen, ri) => {
-    const i = gens.length - 1 - ri; // original index
-    // Skip empty generations (all null)
-    if (i > 0 && gen.every(id => !id)) return;
-    const label = i === 0 ? personName(STATE.people[rootId]) : (GEN_LABELS[i] || `Generation ${i+1}`);
-    const cards = gen.map((id) => makeTreeCard(id, i===0)).join('');
+    const i = ancGens.length - 1 - ri;
+    if (i === 0) return; // skip root here, render it separately in middle
+    if (gen.every(id => !id)) return;
+    const label = GEN_LABELS[i] || `Generation ${i+1}`;
+    const cards = gen.map(id => makeTreeCard(id, false)).join('');
+    html += `<div class="gen-section">
+      <div class="gen-label">${label.toUpperCase()}</div>
+      <div class="gen-row">${cards}</div>
+    </div>`;
+  });
+
+  // ── ROOT PERSON (middle) ──
+  html += `<div class="gen-section gen-section-root">
+    <div class="gen-label" style="color:var(--accent);">${personName(STATE.people[rootId]).toUpperCase()}</div>
+    <div class="gen-row">${makeTreeCard(rootId, true)}</div>
+  </div>`;
+
+  // ── DESCENDANTS (below) ──
+  descGens.slice(1).forEach((gen, i) => {
+    if (!gen.length) return;
+    const label = DESC_LABELS[i+1] || `Generation +${i+1}`;
+    const cards = gen.map(id => {
+      // Mark spouses differently - they appear in gen1 alongside children
+      const p = STATE.people[id];
+      const isSpouse = i === 0 && p && (p.famsS||[]).some(fid => {
+        const fam = STATE.families[fid];
+        return fam && (fam.husb === rootId || fam.wife === rootId);
+      }) && id !== rootId;
+      return makeTreeCard(id, false, isSpouse);
+    }).join('');
     html += `<div class="gen-section">
       <div class="gen-label">${label.toUpperCase()}</div>
       <div class="gen-row">${cards}</div>
