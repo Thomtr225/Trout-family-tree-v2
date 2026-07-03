@@ -853,8 +853,22 @@ async function fbLoadEdits() {
     const snap = await db.collection('individuals').get();
     snap.forEach(doc => {
       const id = '@' + doc.id + '@';
-      if (STATE.people[id]) {
-        Object.assign(STATE.people[id], doc.data());
+      if (!STATE.people[id]) return;
+      const data = doc.data();
+      // Only apply fields that were explicitly edited by a user
+      // Never overwrite GEDCOM birth/death with stale Firebase data
+      // unless the record was saved via our edit form (has updatedBy field)
+      if (data.updatedBy) {
+        // This was saved by our edit form — apply all fields
+        const safe = { ...data };
+        delete safe.updatedAt;
+        delete safe.updatedBy;
+        Object.assign(STATE.people[id], safe);
+      } else {
+        // Old MyHeritage data in Firebase — only apply non-date fields
+        const safeFields = ['given', 'surname', 'name', 'sex', 'notes', 
+                           'nickname', 'prefix', 'suffix', 'marriedName'];
+        safeFields.forEach(f => { if (data[f] !== undefined) STATE.people[id][f] = data[f]; });
       }
     });
     console.log(`Loaded ${snap.size} edits from Firebase`);
