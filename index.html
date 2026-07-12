@@ -1112,14 +1112,18 @@ async function tryLoadRealData() {
 
   loadSavedEdits();
   loadSavedPhotoEdits();
-  if (reloaded) {
-    document.getElementById('people-surname').innerHTML = '<option value="">All surnames</option>';
-    buildPeopleView();
-    buildStats();
-    buildGallery();
-    populateSurnameFilter();
-    setRootPerson();
-  }
+
+  // Load edits and photos from Firebase (syncs across all devices)
+  await fbLoadEdits();
+  await fbLoadAllPhotos();
+
+  // Always rebuild views so Firebase data is reflected
+  document.getElementById('people-surname').innerHTML = '<option value="">All surnames</option>';
+  buildPeopleView();
+  buildStats();
+  buildGallery();
+  populateSurnameFilter();
+  setRootPerson();
 }
 
 // ═══════════════════════════════════════════
